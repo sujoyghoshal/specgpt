@@ -98,12 +98,27 @@ export class DocumentRepository implements IDocumentRepository {
       processedAt?: Date
     },
   ): Promise<Document> {
-    const doc = await prisma.document.update({ where: { id }, data })
+    const doc = await prisma.document.update({
+      where: { id },
+      data: {
+        ...data,
+        specNumber: data.specNumber?.slice(0, 50),
+        specTitle: data.specTitle?.slice(0, 500),
+        version: data.version?.slice(0, 20),
+      },
+    })
     return toSafe(doc) as unknown as Document
   }
 
   async delete(id: string): Promise<void> {
     await prisma.document.delete({ where: { id } })
+  }
+
+  async findChunksByDocumentId(documentId: string): Promise<DocumentChunk[]> {
+    return prisma.documentChunk.findMany({
+      where: { documentId },
+      orderBy: { chunkIndex: 'asc' },
+    })
   }
 
   async createChunks(chunks: CreateChunkDto[]): Promise<void> {
@@ -115,7 +130,7 @@ export class DocumentRepository implements IDocumentRepository {
         contentHash: c.contentHash,
         pageStart: c.pageStart,
         pageEnd: c.pageEnd,
-        section: c.section,
+        section: c.section?.slice(0, 500),
         tokenCount: c.tokenCount,
       })),
       skipDuplicates: true,

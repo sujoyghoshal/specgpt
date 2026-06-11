@@ -3,6 +3,7 @@ import { documentRepository } from '@/core/container'
 import { pdfExtractor } from './PdfExtractor'
 import { chunkingService } from './ChunkingService'
 import { fileStorageService } from '@/infrastructure/storage/FileStorageService'
+import { embeddingService } from '@/infrastructure/vector-store/EmbeddingService'
 import { logger } from '@/utils/logger'
 
 // Maps extracted release string → prisma enum
@@ -79,7 +80,20 @@ export class DocumentProcessor {
         })),
       )
 
-      // ── 6. Mark READY ────────────────────────────────────────────
+      // ── 6. Generate & store embeddings ──────────────────────────
+      try {
+        const storedChunks = await documentRepository.findChunksByDocumentId(documentId)
+        const texts = storedChunks.map((c) => c.content)
+        const embeddings = await embeddingService.embedBatchLarge(texts)
+        await Promise.all(
+          storedChunks.map((c, i) => documentRepository.setEmbedding(c.id, embeddings[i]))
+        )
+        logger.info('Embeddings stored', { documentId, count: storedChunks.length })
+      } catch (embErr: any) {
+        logger.warn('Embedding generation skipped (non-fatal)', { documentId, error: embErr.message })
+      }
+
+      // ── 7. Mark READY ────────────────────────────────────────────
       await documentRepository.updateMetadata(documentId, {
         chunkCount: chunks.length,
         processedAt: new Date(),

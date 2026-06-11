@@ -58,6 +58,7 @@ export interface IDocumentRepository {
 
   // Chunk operations
   createChunks(chunks: CreateChunkDto[]): Promise<void>
+  findChunksByDocumentId(documentId: string): Promise<DocumentChunk[]>
   setEmbedding(chunkId: string, embedding: number[]): Promise<void>
   vectorSearch(params: {
     embedding: number[]

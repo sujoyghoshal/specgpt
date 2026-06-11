@@ -15,7 +15,7 @@
     "@types": "dist/types"
   },
   "scripts": {
-    "dev": "cross-env NODE_EXTRA_CA_CERTS=C:\\certs\\corporate-ca.pem tsx watch src/server.ts",
+    "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",

@@ -1,5 +1,9 @@
 import 'module-alias/register'
 import 'dotenv/config'
+
+// Prisma returns BigInt for fileSize; make it JSON-serializable
+;(BigInt.prototype as any).toJSON = function () { return Number(this) }
+
 import { createApp } from './app'
 import { config } from './config'
 import { logger } from './utils/logger'

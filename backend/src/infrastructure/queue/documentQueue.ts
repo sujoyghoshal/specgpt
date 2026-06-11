@@ -51,6 +51,8 @@ class InProcessQueue {
 }
 
 let _queue: any = new InProcessQueue()
+// Captured when documentWorker calls .process() — replayed onto Bull if Redis becomes available
+let _savedProcessor: { concurrency: number; fn: Processor } | null = null
 
 export function getDocumentQueue() { return _queue }
 
@@ -91,16 +93,28 @@ checkRedis().then(async (available) => {
   })
 
   bull.on('error', (err) => logger.error('Document queue error', { error: err.message }))
-  bull.on('failed', (job, err) => logger.error('Document job failed', { jobId: job.id, error: err.message }))
+  bull.on('failed', (job, err) => logger.error('Document job failed', { jobId: job.id, attempt: job.attemptsMade, error: err.message }))
   bull.on('completed', (job) => logger.info('Document job completed', { jobId: job.id }))
 
   _queue = bull
+
+  // Register processor that was set up before Bull was ready
+  if (_savedProcessor) {
+    bull.process(_savedProcessor.concurrency, _savedProcessor.fn)
+  }
+
   logger.info('Document queue connected to Redis')
 })
 
 // Export a proxy so imports always get the current queue instance
 export const documentQueue = new Proxy({} as any, {
   get(_target, prop) {
+    if (prop === 'process') {
+      return (concurrency: number, fn: Processor) => {
+        _savedProcessor = { concurrency, fn }
+        return _queue.process(concurrency, fn)
+      }
+    }
     return typeof _queue[prop] === 'function'
       ? _queue[prop].bind(_queue)
       : _queue[prop]
