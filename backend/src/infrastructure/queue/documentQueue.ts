@@ -100,7 +100,7 @@ checkRedis().then(async (available) => {
 
   // Register processor that was set up before Bull was ready
   if (_savedProcessor) {
-    bull.process(_savedProcessor.concurrency, _savedProcessor.fn)
+    bull.process(_savedProcessor.concurrency, _savedProcessor.fn as any)
   }
 
   logger.info('Document queue connected to Redis')
